@@ -49,17 +49,68 @@ FEED_EXTRACT_JS = """
 
     function cleanContent(raw, author) {
         let lines = raw.split('\\n').map((l) => l.trim()).filter(Boolean);
-        // Drop lines that are UI chrome
         const skip = /^(Like|Comment|Repost|Send|Follow|Suggested|Feed post|\\d+[hdwmo]\\s*•|Premium|Promoted|• 3rd\\+|• 2nd|• 1st)/i;
-        lines = lines.filter((l) => !skip.test(l) && l !== author);
-        // Remove author title lines (short lines right after author often metadata)
-        const content = lines.join('\\n').trim();
-        return content;
+        const reactionLine = /\\b(loves|liked|reposted|celebrates)\\s+this\\b/i;
+        lines = lines.filter((l) => !skip.test(l) && l !== author && !reactionLine.test(l));
+        let content = lines.join('\\n').trim();
+        content = content.replace(/\\s+\\d[\\d,]*\\s+\\d[\\d,]*(?:\\s+\\d[\\d,]*)?\\s*$/, '');
+        content = content.replace(/\\s+\\d[\\d,]*\\s+comments?\\s*$/i, '');
+        content = content.replace(/\\s*…\\s*more\\s*$/i, '');
+        content = content.replace(/\\s*\\.\\.\\.\\s*more\\s*$/i, '');
+        return content.trim();
     }
 
-    function pickProfileUrl(container) {
-        const link = container.querySelector('a[href*="/in/"]');
-        return link ? link.href.split('?')[0] : null;
+    function isGenericPostListingUrl(href) {
+        if (!href) return true;
+        const path = href.split('?')[0].replace(/\\/$/, '');
+        if (/\\/posts\\/?$/.test(path)) return true;
+        if (/\\/recent-activity\\/?$/.test(path)) return true;
+        return false;
+    }
+
+    function scorePostUrl(href) {
+        if (!href || isGenericPostListingUrl(href)) return -1;
+        if (href.includes('/feed/update/')) return 100;
+        if (href.includes('/posts/') && href.includes('_activity-')) return 90;
+        if (href.includes('activity:')) return 85;
+        if (href.includes('/pulse/')) return 80;
+        if (href.includes('/posts/')) return 10;
+        return 0;
+    }
+
+    function urnToFeedUrl(urn) {
+        if (!urn || !urn.includes('activity:')) return null;
+        return 'https://www.linkedin.com/feed/update/' + urn + '/';
+    }
+
+    function pickProfileUrl(container, author) {
+        const links = Array.from(container.querySelectorAll('a[href*="/in/"]'));
+        const authorLower = (author || '').toLowerCase().trim();
+        
+        // Priority 1: Exact or highly similar text match
+        for (const link of links) {
+            const text = (link.innerText || '').toLowerCase().trim();
+            if (text === authorLower || text.includes(authorLower)) {
+                return link.href.split('?')[0];
+            }
+        }
+        
+        // Priority 2: Check alt text on images inside links (avatars)
+        for (const link of links) {
+            const img = link.querySelector('img');
+            if (img && (img.alt || '').toLowerCase().includes(authorLower)) {
+                return link.href.split('?')[0];
+            }
+        }
+
+        // Priority 3: Handle "Liked by X" scenarios
+        // In these cards, the person who liked it is often the first link.
+        if (links.length > 1 && container.innerText.toLowerCase().includes('liked')) {
+             // Look for a link that is NOT the first one if the first one doesn't match name
+             return links[1].href.split('?')[0];
+        }
+
+        return links.length ? links[0].href.split('?')[0] : null;
     }
 
     function pickAuthorTitle(container, author) {
@@ -128,28 +179,65 @@ FEED_EXTRACT_JS = """
     }
 
     function pickPostUrl(container) {
-        const patterns = [
+        const candidates = [];
+
+        // Strategy 1: Extract URN from data attributes
+        let el = container;
+        for (let i = 0; i < 8 && el; i++) {
+            for (const attr of ['data-urn', 'data-activity-urn', 'data-id', 'data-post-id']) {
+                const urn = el.getAttribute(attr);
+                if (urn && urn.includes('activity:')) {
+                    const feedUrl = urnToFeedUrl(urn);
+                    if (feedUrl) candidates.push({ url: feedUrl, score: 100 });
+                }
+            }
+            el = el.parentElement;
+        }
+
+        // Strategy 2: Look for common post URL selectors
+        const selectors = [
             'a[href*="/feed/update/"]',
-            'a[href*="/posts/"]',
+            'a[href*="/posts/"][href*="_activity-"]',
             'a[href*="activity:"]',
             'a[href*="/pulse/"]',
+            'span[data-test-id="timestamp"] a',
+            'time a',
+            'a[role="link"][href*="/posts/"]',
+            'a[href*="/posts/"]',
         ];
-        for (const sel of patterns) {
-            const link = container.querySelector(sel);
-            if (link && link.href) return link.href.split('?')[0];
-        }
-        for (const a of container.querySelectorAll('a[href*="linkedin.com"]')) {
-            const href = a.href || '';
-            if (
-                href.includes('/feed/update/') ||
-                href.includes('/posts/') ||
-                href.includes('activity') ||
-                href.includes('/pulse/')
-            ) {
-                return href.split('?')[0];
+        for (const sel of selectors) {
+            for (const link of container.querySelectorAll(sel)) {
+                const href = (link.href || '').split('?')[0];
+                const score = scorePostUrl(href);
+                if (score >= 0) candidates.push({ url: href, score });
             }
         }
-        return null;
+
+        // Strategy 3: Try all links in the container
+        for (const a of container.querySelectorAll('a[href*="linkedin.com"]')) {
+            const href = (a.href || '').split('?')[0];
+            const score = scorePostUrl(href);
+            if (score >= 0) candidates.push({ url: href, score });
+        }
+
+        // Strategy 4: For promoted posts, try to find the learn more link or company page link
+        for (const a of container.querySelectorAll('a')) {
+            const href = (a.href || '').split('?')[0];
+            const text = (a.textContent || '').trim().toLowerCase();
+            // If it's a /company/ link, it's likely a promoted company post
+            if (href.includes('/company/') && !href.includes('linkedin.com/'))  {
+                const score = 5;
+                candidates.push({ url: href, score });
+            }
+            // Look for "learn more" type links that might point to the post
+            if ((text.includes('learn') || text.includes('see') || text.includes('view')) && href.includes('linkedin.com')) {
+                const score = 30;
+                candidates.push({ url: href, score });
+            }
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+        return candidates.length ? candidates[0].url : null;
     }
 
     menuButtons.forEach((btn, index) => {
@@ -173,7 +261,7 @@ FEED_EXTRACT_JS = """
             linkedin_post_id: `post-${index}-${author.replace(/\\s+/g, '-')}`,
             author_name: author,
             author_title: pickAuthorTitle(container, author),
-            author_profile_url: pickProfileUrl(container),
+            author_profile_url: pickProfileUrl(container, author),
             content,
             posted_time: pickTime(container),
             reactions_count: pickReactionCount(container),
@@ -202,80 +290,134 @@ ENGAGE_WITH_POST_JS = """
     const authorNorm = norm(authorName);
     const snippetNorm = norm(contentSnippet);
     const profileNorm = norm((authorProfileUrl || "").split("?")[0]).replace(/\\/$/, "");
-    const snippetHead = snippetNorm.slice(0, 80);
+    const snippetHead = snippetNorm.slice(0, 60);
 
-    const menuButtons = Array.from(
-        document.querySelectorAll('button[aria-label^="Open control menu for post by"]')
-    );
-    const btn = menuButtons.find((b) => norm(b.getAttribute('aria-label') || '').includes(authorNorm));
-
-    function findPostContainer(button) {
-        let el = button.parentElement;
-        let best = null;
-        for (let i = 0; i < 25 && el; i++) {
-            const txt = (el.innerText || "").trim();
-            if (txt.length > 120) best = el;
-            if (snippetNorm && norm(txt).includes(snippetNorm)) return el;
-            el = el.parentElement;
-        }
-        return best;
-    }
-
-    let container = null;
-    if (btn) {
-        container = findPostContainer(btn);
+    function hasEngagementButtons(el) {
+        return el.querySelector('button[aria-label="Comment"], button[aria-label*="Like"], button[aria-label*="Reaction"]');
     }
 
     function scoreContainer(el) {
         const txt = norm(el.innerText || "");
-        if (!txt || txt.length < 80) return -1;
-        const hasAction = el.querySelector('button[aria-label="Comment"], button[aria-label*="Like"]');
-        if (!hasAction) return -1;
+        const htmlText = norm(el.innerHTML || "");
+        
+        if (!txt || txt.length < 40) return -1;
+        if (!hasEngagementButtons(el)) return -1;
 
         let score = 0;
-        if (authorNorm && txt.includes(authorNorm)) score += 3;
-        if (snippetHead && txt.includes(snippetHead)) score += 6;
-        else if (snippetNorm && txt.includes(snippetNorm.slice(0, 40))) score += 4;
-
-        if (profileNorm) {
-            const profileLink = Array.from(el.querySelectorAll('a[href*="/in/"]'))
-                .map((a) => norm((a.href || "").split("?")[0]).replace(/\\/$/, ""))
-                .find((href) => href && (href === profileNorm || href.endsWith(profileNorm.split("/").pop() || "")));
-            if (profileLink) score += 5;
+        
+        // Author name match
+        if (authorNorm && txt.includes(authorNorm)) score += 10;
+        
+        // Content snippet matching - be flexible
+        if (snippetNorm) {
+            if (txt.includes(snippetHead)) score += 20;  // exact match at start
+            else if (txt.includes(snippetNorm.slice(0, 40))) score += 15;  // 40 char match
+            else if (txt.includes(snippetNorm.slice(0, 20))) score += 8;   // 20 char match
         }
+        
+        // Profile URL matching
+        if (profileNorm) {
+            const profileLinks = Array.from(el.querySelectorAll('a[href*="/in/"]'));
+            for (const link of profileLinks) {
+                const href = norm((link.href || "").split("?")[0]).replace(/\\/$/, "");
+                if (href && (href === profileNorm || href.includes(profileNorm.split("/").pop() || ""))) {
+                    score += 12;
+                    break;
+                }
+            }
+        }
+        
         return score;
     }
 
-    if (!container) {
-        const candidates = Array.from(document.querySelectorAll("main div"));
-        let best = null;
-        let bestScore = -1;
-        for (const el of candidates) {
-            const s = scoreContainer(el);
-            if (s > bestScore) {
-                bestScore = s;
-                best = el;
+    let container = null;
+
+    // Strategy 1: Find by menu button with author name
+    const menuButtons = Array.from(
+        document.querySelectorAll('button[aria-label^="Open control menu for post by"]')
+    );
+    
+    for (const btn of menuButtons) {
+        const btnLabel = norm(btn.getAttribute('aria-label') || '');
+        if (authorNorm && btnLabel.includes(authorNorm)) {
+            let el = btn.parentElement;
+            for (let i = 0; i < 30 && el; i++) {
+                if (hasEngagementButtons(el)) {
+                    container = el;
+                    break;
+                }
+                el = el.parentElement;
             }
+            if (container) break;
         }
-        if (bestScore >= 4) container = best;
     }
 
-    if (!container) return { ok: false, error: "Post container not found by author or snippet" };
+    // Strategy 2: Brute force search with better scoring
+    if (!container) {
+        const candidates = Array.from(document.querySelectorAll("main article, main div[role='article'], main li div[role='article'], main div[class*='feed'] div[class*='post']"));
+        let bestContainer = null;
+        let bestScore = -1;
+        
+        for (const el of candidates) {
+            const score = scoreContainer(el);
+            if (score > bestScore) {
+                bestScore = score;
+                bestContainer = el;
+            }
+        }
+        
+        // Accept if we have any decent match
+        if (bestScore >= 8) {
+            container = bestContainer;
+        }
+    }
+
+    // Strategy 3: More aggressive search - find any post containers
+    if (!container) {
+        const allPosts = Array.from(document.querySelectorAll("div[class*='artdeco-card'], [class*='feed-update'], [class*='post-container']"));
+        for (const post of allPosts) {
+            if (hasEngagementButtons(post) && post.offsetHeight > 0) {
+                const score = scoreContainer(post);
+                if (score >= 5 || (authorNorm && post.innerText.toLowerCase().includes(authorNorm))) {
+                    container = post;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Strategy 4: Last resort - find first visible post with comment button
+    if (!container) {
+        const allPosts = Array.from(document.querySelectorAll("button[aria-label='Comment']"));
+        for (const btn of allPosts) {
+            let el = btn.parentElement;
+            for (let i = 0; i < 15 && el; i++) {
+                if (el.offsetHeight > 100 && el.innerText.length > 40) {
+                    container = el;
+                    break;
+                }
+                el = el.parentElement;
+            }
+            if (container) break;
+        }
+    }
+
+    if (!container) return { ok: false, error: "Post container not found - try scrolling to ensure post is visible" };
     container.setAttribute('data-cursor-target', '1');
 
     if (action === "like") {
-        const likeButton = container.querySelector('button[aria-label="Like"], button[aria-label*="Like "]');
-        if (!likeButton) return { ok: false, error: "Like button not found" };
-        const pressed = likeButton.getAttribute("aria-pressed") === "true";
+        const likeBtn = container.querySelector('button[aria-label*="Like"], button[aria-label*="Reaction"]');
+        if (!likeBtn) return { ok: false, error: "Like button not found in post" };
+        const pressed = likeBtn.getAttribute("aria-pressed") === "true";
         if (pressed) return { ok: true, status: "already_liked" };
-        likeButton.click();
+        likeBtn.click();
         container.removeAttribute('data-cursor-target');
         return { ok: true, status: "liked" };
     }
 
     if (action === "comment") {
         const commentBtn = container.querySelector('button[aria-label="Comment"]');
-        if (!commentBtn) return { ok: false, error: "Comment button not found" };
+        if (!commentBtn) return { ok: false, error: "Comment button not found in post" };
         commentBtn.click();
         return { ok: true, status: "comment_opened" };
     }
@@ -334,6 +476,16 @@ class LinkedInCrawler:
             logger.info("Launched Chromium with persistent profile at %s", profile_dir)
 
         self._page = self._context.pages[0] if self._context.pages else await self._context.new_page()
+        
+        # High-speed optimizations: Block heavy resources (Images, Media, CSS)
+        async def block_resources(route):
+            if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                await route.abort()
+            else:
+                await route.continue_()
+
+        await self._page.route("**/*", block_resources)
+
         await self._page.add_init_script(
             "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
         )
@@ -409,9 +561,9 @@ class LinkedInCrawler:
         await page.wait_for_timeout(1500)
 
         # Initial scroll to trigger lazy-loaded posts
-        for _ in range(3):
-            await page.evaluate("window.scrollBy(0, 600)")
-            await page.wait_for_timeout(1200)
+        for _ in range(4):
+            await page.evaluate("window.scrollBy(0, 1000)")
+            await page.wait_for_timeout(800)
 
     async def fetch_feed_posts(self, max_posts: Optional[int] = None) -> list[PostSchema]:
         max_posts = max_posts or self.settings.linkedin_max_posts
@@ -515,6 +667,20 @@ class LinkedInCrawler:
         if action not in {"like", "comment"}:
             return {"ok": False, "error": f"Unsupported action '{action}'"}
 
+        # Scroll the page to make sure the post is visible
+        await self._page.evaluate(
+            """() => {
+                // Scroll to center of page to load more posts
+                const main = document.querySelector('main');
+                if (main) {
+                    main.scrollTop = main.scrollHeight / 2;
+                } else {
+                    window.scrollBy(0, window.innerHeight);
+                }
+            }"""
+        )
+        await self._page.wait_for_timeout(800)
+
         result = await self._page.evaluate(
             ENGAGE_WITH_POST_JS,
             {
@@ -530,38 +696,80 @@ class LinkedInCrawler:
 
         if action == "comment":
             try:
-                target = self._page.locator('[data-cursor-target="1"]').first
-                box = target.locator(
-                    'div[role="textbox"][contenteditable="true"]:visible, div.ql-editor[contenteditable="true"]:visible'
-                ).first
-                if await box.count() == 0:
-                    box = self._page.locator(
-                        'div[role="textbox"][contenteditable="true"]:visible, div.ql-editor[contenteditable="true"]:visible'
-                    ).first
-                await box.wait_for(timeout=5000)
+                await self._page.wait_for_timeout(800)
+                
+                # Find the comment textbox with multiple selector strategies
+                box = None
+                box_selectors = [
+                    'div[data-placeholder="Start a post"]',
+                    'div[role="textbox"][contenteditable="true"]',
+                    'div.ql-editor[contenteditable="true"]',
+                    'div[data-cursor-target="1"] div[contenteditable="true"]',
+                    '[data-cursor-target="1"] div[contenteditable="true"]',
+                    'div[contenteditable="true"]',
+                ]
+                
+                for selector in box_selectors:
+                    box_candidate = self._page.locator(selector).first
+                    if await box_candidate.count() > 0:
+                        try:
+                            await box_candidate.wait_for(state="visible", timeout=2000)
+                            box = box_candidate
+                            break
+                        except:
+                            continue
+                
+                if not box or await box.count() == 0:
+                    return {"ok": False, "error": "Comment textbox not found"}
+                
+                # Click and focus the textbox
                 await box.click()
-                await box.fill("")
-                await box.type(comment_text or "", delay=25)
-                submit = target.locator(
-                    'button.comments-comment-box__submit-button:not([disabled]), '
-                    'button[aria-label="Post comment"]:not([disabled]), '
-                    'button[aria-label*="Post"]:not([disabled])'
-                ).first
-                if await submit.count() == 0:
-                    submit = self._page.locator(
-                        'button.comments-comment-box__submit-button:not([disabled]), '
-                        'button[aria-label="Post comment"]:not([disabled]), '
-                        'button[aria-label*="Post"]:not([disabled])'
-                    ).first
-                await submit.wait_for(timeout=5000)
+                await self._page.wait_for_timeout(300)
+                
+                # Clear and type the comment
+                await box.evaluate("el => el.textContent = ''")
+                await box.type(comment_text or "", delay=15)
+                await self._page.wait_for_timeout(400)
+                
+                # Find and click the submit button with multiple selector strategies
+                submit = None
+                submit_selectors = [
+                    'button[aria-label="Post comment"]',
+                    'button[aria-label="Publish comment"]',
+                    'button.comments-comment-box__submit-button',
+                    '[data-cursor-target="1"] button:has-text("Post")',
+                    'button:has-text("Post")',
+                    'div[data-cursor-target="1"] button[type="button"]:not([disabled])',
+                ]
+                
+                for selector in submit_selectors:
+                    submit_candidate = self._page.locator(selector).first
+                    if await submit_candidate.count() > 0:
+                        try:
+                            await submit_candidate.wait_for(state="visible", timeout=2000)
+                            submit = submit_candidate
+                            break
+                        except:
+                            continue
+                
+                if not submit or await submit.count() == 0:
+                    return {"ok": False, "error": "Submit button not found"}
+                
                 await submit.click()
-                await self._page.wait_for_timeout(1200)
-                await self._page.evaluate(
-                    "() => document.querySelectorAll('[data-cursor-target=\"1\"]').forEach((el) => el.removeAttribute('data-cursor-target'))"
-                )
+                await self._page.wait_for_timeout(1500)
+                
+                # Clean up the marker
+                try:
+                    await self._page.evaluate(
+                        "() => document.querySelectorAll('[data-cursor-target=\"1\"]').forEach((el) => el.removeAttribute('data-cursor-target'))"
+                    )
+                except:
+                    pass
+                
                 return {"ok": True, "status": "commented"}
             except Exception as exc:
                 await _save_debug_screenshot(self._page, "comment_failed")
+                logger.error("Comment submit failed: %s", exc)
                 return {"ok": False, "error": f"Comment submit failed: {exc}"}
         return result
 
@@ -593,8 +801,8 @@ async def run_manual_engagement(
     comment_text: str | None = None,
     dry_run: bool = True,
 ) -> dict:
-    # Manual actions are more reliable in visible mode on LinkedIn.
-    async with LinkedInCrawler(headless=False) as crawler:
+    # Manual actions are performed in headless mode by default now.
+    async with LinkedInCrawler(headless=True) as crawler:
         return await crawler.engage_with_post(
             author_name=author_name,
             author_profile_url=author_profile_url,

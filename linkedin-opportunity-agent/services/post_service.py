@@ -3,6 +3,7 @@ from datetime import datetime
 from database.crud import get_posts, update_post, update_post_engagement
 from database.db import get_db
 from utils.helpers import format_posted_time
+from utils.text_cleaner import normalize_linkedin_post_url, strip_linkedin_feed_noise
 
 
 class PostService:
@@ -28,17 +29,25 @@ class PostService:
 
     @staticmethod
     def _to_dict(post) -> dict:
+        content = strip_linkedin_feed_noise(
+            post.content or "",
+            reactions_count=post.reactions_count or 0,
+            comments_count=post.comments_count or 0,
+            author_name=post.author_name,
+            author_title=post.author_title,
+        )
+        post_url = normalize_linkedin_post_url(post.post_url)
         return {
             "id": post.id,
             "author_name": post.author_name,
             "author_title": post.author_title,
             "author_profile_url": post.author_profile_url,
-            "content": post.content,
+            "content": content,
             "summary": post.summary,
             "domain": post.domain,
             "reactions_count": post.reactions_count,
             "comments_count": post.comments_count,
-            "post_url": post.post_url,
+            "post_url": post_url,
             "posted_at": post.posted_at,
             "posted_display": format_posted_time(post.posted_at),
             "scraped_at": str(post.scraped_at) if post.scraped_at else "",

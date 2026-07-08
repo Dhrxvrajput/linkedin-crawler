@@ -1,5 +1,5 @@
 from graph.state import AgentState
-from llm.groq import get_llm_client
+from llm.factory import get_llm_client
 from llm.output_parsers import parse_relationship_response
 from llm.prompts import ANALYZE_RELATIONSHIP_PROMPT
 from schemas.people_schema import PersonSchema

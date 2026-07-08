@@ -44,7 +44,7 @@ def signup(email: str, password: str, name: str | None = None) -> tuple[bool, st
         if get_user_by_email(db, email):
             return False, "An account with this email already exists."
         create_app_user(db, email, _hash_password(password), name=name or None)
-    return True, "Account created. Log in next — you'll connect LinkedIn on first sign-in."
+    return True, "Account created. You can log in now."
 
 
 def login(email: str, password: str) -> tuple[bool, str, dict | None]:
@@ -53,7 +53,7 @@ def login(email: str, password: str) -> tuple[bool, str, dict | None]:
         user = get_user_by_email(db, email)
         if not user or not _verify_password(password, user.password_hash):
             return False, "Invalid email or password.", None
-        return True, "Logged in.", _user_payload(user)
+        return True, "Welcome back!", _user_payload(user)
 
 
 def refresh_user(user_id: int) -> dict | None:

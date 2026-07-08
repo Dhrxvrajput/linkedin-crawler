@@ -24,7 +24,13 @@ def parse_domain_response(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def parse_opportunity_response(data: dict[str, Any]) -> OpportunityDetection:
+def parse_opportunity_response(data: Any) -> OpportunityDetection:
+    # Recursively unwrap lists to find the dictionary
+    while isinstance(data, list) and len(data) > 0:
+        data = data[0]
+    
+    if not isinstance(data, dict):
+        return OpportunityDetection(is_opportunity=False)
     try:
         return OpportunityDetection(**data)
     except ValidationError:

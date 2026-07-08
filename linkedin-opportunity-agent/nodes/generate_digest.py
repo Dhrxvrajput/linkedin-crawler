@@ -1,5 +1,5 @@
 from graph.state import AgentState
-from llm.groq import get_llm_client
+from llm.factory import get_llm_client
 from llm.prompts import GENERATE_DIGEST_PROMPT
 from config.settings import get_settings
 from database.crud import create_digest

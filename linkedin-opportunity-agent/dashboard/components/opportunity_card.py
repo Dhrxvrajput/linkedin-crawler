@@ -24,16 +24,37 @@ def render_opportunity_card(opp, on_status_change=None):
             for action in opp.action_items:
                 st.markdown(f"- {action}")
 
+        # Show current status badge
+        status = opp.status or "new"
+        st.caption(f"Current Status: **{status.title()}**")
+
         action_cols = st.columns(4)
         with action_cols[0]:
             if opp.author_profile_url:
-                st.link_button("Profile", opp.author_profile_url)
+                st.link_button("Profile", opp.author_profile_url, use_container_width=True)
+        
         with action_cols[1]:
-            if on_status_change and st.button("Reviewed", key=f"review_{opp.id}"):
+            is_reviewed = status == "reviewed"
+            if on_status_change and st.button(
+                "Reviewed" if not is_reviewed else "✓ Reviewed",
+                key=f"review_{opp.id}",
+                type="primary" if is_reviewed else "secondary",
+                use_container_width=True,
+                disabled=is_reviewed
+            ):
                 on_status_change(opp.id, "reviewed")
+        
         with action_cols[2]:
-            if on_status_change and st.button("Actioned", key=f"action_{opp.id}"):
+            is_actioned = status == "actioned"
+            if on_status_change and st.button(
+                "Actioned" if not is_actioned else "✓ Actioned",
+                key=f"action_{opp.id}",
+                type="primary" if is_actioned else "secondary",
+                use_container_width=True,
+                disabled=is_actioned
+            ):
                 on_status_change(opp.id, "actioned")
+        
         with action_cols[3]:
-            if on_status_change and st.button("Dismiss", key=f"dismiss_{opp.id}"):
+            if on_status_change and st.button("Dismiss", key=f"dismiss_{opp.id}", use_container_width=True):
                 on_status_change(opp.id, "dismissed")

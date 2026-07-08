@@ -189,7 +189,7 @@ async def login_to_linkedin(
     logger.info("Attempting automated login (headless)...")
 
     for login_url in LOGIN_URLS:
-        await page.goto(login_url, wait_until="networkidle", timeout=60000)
+        await page.goto(login_url, wait_until="domcontentloaded", timeout=60000)
         await page.wait_for_timeout(2000)
 
         if await _fill_login_form(page, settings.linkedin_email, settings.linkedin_password):

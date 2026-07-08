@@ -42,11 +42,19 @@ class Settings(BaseSettings):
     max_engagements_per_run: int = 3
     comment_max_chars: int = 110
 
+    # LLM Settings
+    llm_provider: str = "google" # "groq" or "google"
+    
     # Groq LLM
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "llama-3.1-8b-instant"
     groq_temperature: float = 0.3
     groq_max_tokens: int = 4096
+
+    # Google LLM (Gemini)
+    google_api_key: str = ""
+    google_model: str = "gemini-3.5-flash"
+    google_temperature: float = 0.3
 
     # User profile (for relevance scoring)
     user_name: str = ""
@@ -64,7 +72,7 @@ class Settings(BaseSettings):
     export_dir: str = str(BASE_DIR / "storage" / "exports")
 
     @field_validator(
-        "linkedin_email", "linkedin_password", "groq_api_key",
+        "linkedin_email", "linkedin_password", "groq_api_key", "google_api_key",
         "user_name", "user_title", "user_company", "user_interests", "user_skills",
         mode="before",
     )

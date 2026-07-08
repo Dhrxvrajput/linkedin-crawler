@@ -1,7 +1,7 @@
 import re
 
 from config.settings import get_settings
-from llm.groq import get_llm_client
+from llm.factory import get_llm_client
 from llm.prompts import GENERATE_CONGRATS_COMMENT_PROMPT
 from schemas.post_schema import PostSchema
 from utils.helpers import safe_json_loads

@@ -18,3 +18,5 @@ class AgentState(TypedDict):
     current_post_index: int
     processed_count: int
     max_posts: int
+    browser_profile: str | None
+    session_path: str | None

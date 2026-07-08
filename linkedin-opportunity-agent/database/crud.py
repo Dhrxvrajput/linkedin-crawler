@@ -266,6 +266,11 @@ def get_user_by_id(db: Session, user_id: int) -> Optional[AppUser]:
     return db.query(AppUser).filter(AppUser.id == user_id).first()
 
 
+def get_all_connected_users(db: Session) -> list[AppUser]:
+    """Returns all users who have successfully connected LinkedIn."""
+    return db.query(AppUser).filter(AppUser.linkedin_connected == 1).all()
+
+
 def create_app_user(db: Session, email: str, password_hash: str, name: str | None = None) -> AppUser:
     user = AppUser(
         email=email.strip().lower(),

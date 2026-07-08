@@ -26,4 +26,4 @@ async def connect_user_linkedin(user_id: int) -> tuple[bool, str]:
     if ok:
         set_linkedin_connected(user_id)
         return True, "LinkedIn connected successfully."
-    return False, "LinkedIn login was not completed. Finish sign-in in the browser and try again."
+    return False, "Please finish signing in to LinkedIn in the browser window, then try again."

@@ -3,12 +3,26 @@ from datetime import datetime
 
 from schemas.post_schema import PostAuthor, PostSchema
 from utils.helpers import generate_post_id, parse_linkedin_date
-from utils.text_cleaner import clean_text, extract_hashtags, extract_urls
+from utils.text_cleaner import (
+    clean_text,
+    extract_hashtags,
+    extract_urls,
+    is_generic_linkedin_post_url,
+    normalize_linkedin_post_url,
+    strip_linkedin_feed_noise,
+)
 
 
 def parse_post_element(element_data: dict) -> PostSchema | None:
     try:
+        reactions_count = _parse_count(element_data.get("reactions_count", "0"))
+        comments_count = _parse_count(element_data.get("comments_count", "0"))
         content = clean_text(element_data.get("content", ""))
+        content = strip_linkedin_feed_noise(
+            content,
+            reactions_count=reactions_count,
+            comments_count=comments_count,
+        )
         if not content or len(content) < 15:
             return None
 
@@ -29,9 +43,9 @@ def parse_post_element(element_data: dict) -> PostSchema | None:
             linkedin_post_id=element_data.get("linkedin_post_id"),
             author=author,
             content=content,
-            reactions_count=_parse_count(element_data.get("reactions_count", "0")),
-            comments_count=_parse_count(element_data.get("comments_count", "0")),
-            post_url=element_data.get("post_url"),
+            reactions_count=reactions_count,
+            comments_count=comments_count,
+            post_url=normalize_linkedin_post_url(element_data.get("post_url")),
             image_urls=element_data.get("image_urls", []),
             posted_at=posted_at,
             scraped_at=datetime.utcnow(),
@@ -55,8 +69,19 @@ def _parse_count(count_str: str) -> int:
 
 def enrich_post_metadata(post: PostSchema) -> PostSchema:
     extract_hashtags(post.content)
+    post.post_url = normalize_linkedin_post_url(post.post_url)
+    if post.post_url:
+        return post
+
     urls = extract_urls(post.content)
-    if urls and not post.post_url:
-        linkedin_urls = [u for u in urls if "linkedin.com" in u.lower()]
-        post.post_url = linkedin_urls[0] if linkedin_urls else urls[0]
+    linkedin_urls = [
+        normalize_linkedin_post_url(u)
+        for u in urls
+        if "linkedin.com" in u.lower()
+    ]
+    linkedin_urls = [u for u in linkedin_urls if u]
+    if linkedin_urls:
+        post.post_url = linkedin_urls[0]
+    elif urls and not is_generic_linkedin_post_url(urls[0]):
+        post.post_url = urls[0]
     return post

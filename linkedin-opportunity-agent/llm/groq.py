@@ -42,6 +42,7 @@ class GroqClient:
         return messages
 
     def generate(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+        import time
         messages = self._build_messages(prompt, system_instruction)
         try:
             response = self.sync.chat.completions.create(
@@ -50,7 +51,12 @@ class GroqClient:
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
             )
-            return response.choices[0].message.content or ""
+            result = response.choices[0].message.content or ""
+            
+            # Safe Sleep: We must wait to stay under the 5 RPM limit
+            time.sleep(12.0)
+            
+            return result
         except Exception as e:
             logger.error("Groq generation failed: %s", e)
             raise
@@ -66,18 +72,39 @@ class GroqClient:
         return result
 
     async def generate_async(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+        import asyncio
+        import random
+        
         messages = self._build_messages(prompt, system_instruction)
-        try:
-            response = await self.async_.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-            )
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error("Groq async generation failed: %s", e)
-            raise
+        max_retries = 5
+        base_delay = 2.0
+        
+        for attempt in range(max_retries):
+            try:
+                response = await self.async_.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
+                )
+                return response.choices[0].message.content or ""
+            except Exception as e:
+                err_msg = str(e)
+                # Only retry on 429 (Rate Limit) or some 5xx errors
+                is_rate_limit = "429" in err_msg or "rate_limit_exceeded" in err_msg.lower()
+                
+                if is_rate_limit and attempt < max_retries - 1:
+                    wait_time = (base_delay * (2 ** attempt)) + random.uniform(0, 1.0)
+                    logger.warning(
+                        "Rate limit (429) on attempt %d. Retrying in %.2fs...",
+                        attempt + 1, wait_time
+                    )
+                    await asyncio.sleep(wait_time)
+                    continue
+                
+                # For other errors or if we ran out of retries, log and re-raise
+                logger.error("Groq async generation failed: %s", e)
+                raise
 
     async def generate_json_async(self, prompt: str, system_instruction: Optional[str] = None) -> dict[str, Any]:
         from utils.helpers import safe_json_loads

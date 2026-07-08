@@ -106,6 +106,10 @@ class AppUser(Base):
     linkedin_connected_at = Column(DateTime, nullable=True)
     linkedin_browser_profile = Column(String, nullable=True)
     linkedin_session_path = Column(String, nullable=True)
+    user_title = Column(String, nullable=True)
+    user_company = Column(String, nullable=True)
+    user_interests = Column(Text, nullable=True)
+    user_skills = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -152,6 +156,10 @@ def _ensure_app_user_columns(engine):
         "linkedin_connected_at": "DATETIME",
         "linkedin_browser_profile": "TEXT",
         "linkedin_session_path": "TEXT",
+        "user_title": "TEXT",
+        "user_company": "TEXT",
+        "user_interests": "TEXT",
+        "user_skills": "TEXT",
     }
     with engine.begin() as conn:
         rows = conn.execute(text("PRAGMA table_info(app_users)")).fetchall()

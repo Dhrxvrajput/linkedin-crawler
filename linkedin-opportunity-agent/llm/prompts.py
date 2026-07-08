@@ -1,4 +1,4 @@
-SUMMARIZE_PROMPT = """Summarize the following LinkedIn post concisely.
+SUMMARIZE_PROMPT = """Summarize the following LinkedIn post concisely in 3-4 sentences.
 
 Post by {author_name} ({author_title}):
 ---
@@ -7,7 +7,7 @@ Post by {author_name} ({author_title}):
 
 Respond in JSON format:
 {{
-    "summary": "2-3 sentence summary",
+    "summary": "3-4 sentence summary",
     "key_topics": ["topic1", "topic2"],
     "sentiment": "positive|neutral|negative"
 }}"""
@@ -126,5 +126,5 @@ Rules:
 
 Respond in JSON:
 {{
-    "comment": "short congratulatory comment"
+    "comment": "comment based on the post "
 }}"""
