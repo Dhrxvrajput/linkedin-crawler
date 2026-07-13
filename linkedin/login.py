@@ -53,10 +53,10 @@ async def _save_debug_screenshot(page: Page, name: str):
     try:
         export_dir = ensure_dir(Path(get_settings().export_dir).parent / "debug")
         path = export_dir / f"{name}.png"
-        await page.screenshot(path=str(path), full_page=True)
+        await page.screenshot(path=str(path), full_page=False)
         logger.info("Debug screenshot saved: %s", path)
     except Exception as e:
-        logger.debug("Could not save screenshot: %s", e)
+        logger.warning("Could not save screenshot: %s", e)
 
 
 async def _is_on_feed(page: Page) -> bool:

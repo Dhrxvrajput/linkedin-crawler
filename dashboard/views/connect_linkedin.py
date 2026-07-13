@@ -10,10 +10,13 @@ from services.user_linkedin_service import connect_user_linkedin
 def _show_failure_screenshot():
     from pathlib import Path
     screenshot_path = Path("storage/debug/last_login_failed.png")
-    if screenshot_path.exists():
+    if screenshot_path.exists() and screenshot_path.stat().st_size > 0:
         st.write("")
         with st.expander("📷 View screenshot of the last failed login attempt"):
-            st.image(str(screenshot_path), caption="Last Attempt Screenshot", use_container_width=True)
+            try:
+                st.image(str(screenshot_path), caption="Last Attempt Screenshot", use_container_width=True)
+            except Exception as e:
+                st.warning(f"Could not load screenshot: {e}")
 
 
 def render():
