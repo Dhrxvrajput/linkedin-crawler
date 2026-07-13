@@ -518,6 +518,14 @@ class LinkedInCrawler:
             await self._playwright.stop()
 
     async def ensure_logged_in(self) -> bool:
+        # Clear stale cookies on a fresh login/injection attempt to prevent ERR_TOO_MANY_REDIRECTS
+        if self._li_at or (self._email and self._password):
+            try:
+                await self._context.clear_cookies()
+                logger.info("Cleared stale cookies from context for fresh login attempt")
+            except Exception as e:
+                logger.warning("Could not clear cookies: %s", e)
+
         if self._li_at:
             try:
                 await self._context.add_cookies([
