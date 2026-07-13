@@ -165,16 +165,22 @@ st.markdown(
     /* ─── Cards / Containers ───────────────────────── */
     div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid var(--card-border) !important;
-        border-radius: 14px !important;
+        border-radius: 12px !important;
         background: var(--card-bg) !important;
         backdrop-filter: blur(12px) !important;
         -webkit-backdrop-filter: blur(12px) !important;
-        padding: 24px 28px !important;
+        padding: 16px 20px !important;
         transition: border-color .3s ease, box-shadow .3s ease;
     }
     div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: var(--card-hover-border) !important;
-        box-shadow: 0 4px 24px rgba(10, 102, 194, .08);
+        box-shadow: 0 4px 20px rgba(10, 102, 194, .06);
+    }
+    /* Inner nested container cards spacing optimization */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 12px 14px !important;
+        border-radius: 10px !important;
+        margin-bottom: 8px !important;
     }
 
     /* ─── Metrics ──────────────────────────────────── */

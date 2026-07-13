@@ -66,7 +66,7 @@ def render():
         opp_service.update_status(opp_id, new_status)
         st.rerun()
 
-    with st.container(height=700, border=True):
+    with st.container(height=700, border=False):
         if not opportunities:
             st.info("No opportunities yet. Run the agent from the Home page.")
         for opp in opportunities:

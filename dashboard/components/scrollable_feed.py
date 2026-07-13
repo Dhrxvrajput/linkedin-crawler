@@ -21,6 +21,6 @@ def render_scrollable_posts(posts: list[dict], height: int = 600, empty_message:
         return
 
     st.caption(f"📰 {len(posts)} posts — scroll to browse")
-    with st.container(height=height, border=True):
+    with st.container(height=height, border=False):
         for post in posts:
             render_post_card(post)
