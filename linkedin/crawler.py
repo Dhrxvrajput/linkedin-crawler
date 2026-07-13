@@ -1,10 +1,12 @@
 import asyncio
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
 # Ensure consistent Playwright browser cache location across headless/cloud user environments
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/tmp/pw-browsers"
+if sys.platform != "darwin":
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/tmp/pw-browsers"
 
 from playwright.async_api import BrowserContext, Page, async_playwright
 
