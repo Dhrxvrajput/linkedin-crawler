@@ -189,7 +189,7 @@ def render_post_card(post):
 
         profile_button_html = ""
         if profile_url:
-            profile_button_html = f"""
+            profile_button_html = dedent(f"""
             <a href="{profile_url}" target="_blank" class="view-profile-btn" style="
                 display: inline-block;
                 background: rgba(10, 102, 194, 0.1);
@@ -204,9 +204,9 @@ def render_post_card(post):
             ">
                 View Profile
             </a>
-            """
+            """).strip()
 
-        metrics_html = f"""
+        metrics_html = dedent(f"""
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px;">
             <div style="display:flex; gap:10px; align-items:center;">
                 <div style="display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:5px 10px; border-radius:6px; font-size:0.75rem;">
@@ -222,5 +222,5 @@ def render_post_card(post):
             </div>
             {profile_button_html}
         </div>
-        """
+        """).strip()
         st.markdown(metrics_html, unsafe_allow_html=True)
