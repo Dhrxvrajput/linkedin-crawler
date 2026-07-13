@@ -61,12 +61,30 @@ async def _save_debug_screenshot(page: Page, name: str):
 
 async def _is_on_feed(page: Page) -> bool:
     url = page.url
-    return (
+    if not (
         ("feed" in url or "mynetwork" in url)
         and "login" not in url
         and "checkpoint" not in url
         and "authwall" not in url
-    )
+    ):
+        return False
+
+    # Double check presence of logged-in layout elements to prevent false positives
+    logged_in_selectors = [
+        "#global-nav",
+        ".global-nav",
+        "input.search-global-typeahead__input",
+        ".feed-identity-module",
+        "button.share-box-feed-entry__trigger",
+        ".global-nav__me-photo",
+    ]
+    for sel in logged_in_selectors:
+        try:
+            if await page.locator(sel).is_visible(timeout=1000):
+                return True
+        except Exception:
+            continue
+    return False
 
 
 async def _find_visible_locator(page: Page, selectors: list[str], timeout: int = 8000):
