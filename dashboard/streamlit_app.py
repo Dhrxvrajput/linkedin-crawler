@@ -41,8 +41,8 @@ def install_playwright_browsers():
     if is_headless:
         import subprocess
         try:
-            # Install chromium binary and dependencies on Streamlit Cloud
-            subprocess.run(["playwright", "install", "chromium"], check=True)
+            # Install chromium binary and dependencies on Streamlit Cloud using active interpreter path to prevent FileNotFoundError
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
         except Exception as e:
             st.warning(f"Programmatic Playwright installation warning: {e}")
 
