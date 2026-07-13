@@ -520,12 +520,20 @@ class LinkedInCrawler:
     async def ensure_logged_in(self) -> bool:
         if self._li_at:
             try:
-                await self._context.add_cookies([{
-                    "name": "li_at",
-                    "value": self._li_at,
-                    "domain": ".www.linkedin.com",
-                    "path": "/",
-                }])
+                await self._context.add_cookies([
+                    {
+                        "name": "li_at",
+                        "value": self._li_at,
+                        "domain": ".linkedin.com",
+                        "path": "/",
+                    },
+                    {
+                        "name": "li_at",
+                        "value": self._li_at,
+                        "domain": "www.linkedin.com",
+                        "path": "/",
+                    }
+                ])
                 logger.info("Injected li_at cookie into browser context")
             except Exception as e:
                 logger.error("Failed to inject li_at cookie: %s", e)
