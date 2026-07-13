@@ -65,3 +65,9 @@ def refresh_user(user_id: int) -> dict | None:
 def set_linkedin_connected(user_id: int) -> None:
     with get_db() as db:
         mark_linkedin_connected(db, user_id)
+
+
+def set_linkedin_disconnected(user_id: int) -> None:
+    with get_db() as db:
+        from database.crud import mark_linkedin_disconnected as db_mark_disconnected
+        db_mark_disconnected(db, user_id)

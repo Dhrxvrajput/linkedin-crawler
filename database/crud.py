@@ -305,6 +305,16 @@ def mark_linkedin_connected(db: Session, user_id: int) -> Optional[AppUser]:
     return user
 
 
+def mark_linkedin_disconnected(db: Session, user_id: int) -> Optional[AppUser]:
+    user = get_user_by_id(db, user_id)
+    if not user:
+        return None
+    user.linkedin_connected = 0
+    user.linkedin_connected_at = None
+    db.flush()
+    return user
+
+
 def get_post_cache(db: Session, post_id: str) -> Optional[PostCache]:
     return db.query(PostCache).filter(PostCache.post_id == post_id).first()
 

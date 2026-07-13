@@ -614,8 +614,7 @@ class LinkedInCrawler:
     async def fetch_feed_posts(self, max_posts: Optional[int] = None) -> list[PostSchema]:
         max_posts = max_posts or self.settings.linkedin_max_posts
         if not await self.ensure_logged_in():
-            logger.error("Cannot fetch posts — not logged in")
-            return []
+            raise RuntimeError("LinkedIn login failed or session expired. Please reconnect your account.")
 
         logger.info("Fetching up to %d posts from LinkedIn feed...", max_posts)
         await self._prepare_feed_page()

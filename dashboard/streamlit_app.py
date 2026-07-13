@@ -635,6 +635,18 @@ if settings.auth_required and not st.session_state.get("authenticated"):
     st.stop()
 
 user = st.session_state.get("user")
+if user and user.get("id"):
+    from database.db import get_db
+    from database.models import AppUser
+    try:
+        with get_db() as db_session:
+            db_user = db_session.query(AppUser).filter(AppUser.id == user["id"]).first()
+            if db_user:
+                user["linkedin_connected"] = bool(db_user.linkedin_connected)
+                st.session_state["user"] = user
+    except Exception:
+        pass
+
 if settings.auth_required and user and not user.get("linkedin_connected"):
     from dashboard.views import connect_linkedin
 
