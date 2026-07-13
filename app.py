@@ -114,23 +114,6 @@ async def crawl_feed(max_posts: int | None = None, user_id: int | None = None) -
         except Exception as e:
             logger.warning("Failed to prepare sample for a post: %s", e)
 
-    # Auto-detect login failure and mark user as disconnected so they can reconnect via dashboard UI
-    if user_id is not None and result.get("errors"):
-        login_failed = any(
-            "login failed" in str(err).lower() or
-            "session expired" in str(err).lower() or
-            "not logged in" in str(err).lower() or
-            "no valid linkedin credentials" in str(err).lower()
-            for err in result["errors"]
-        )
-        if login_failed:
-            logger.warning("LinkedIn login failed or session expired for user %d. Resetting connection status.", user_id)
-            try:
-                from services.auth_service import set_linkedin_disconnected
-                set_linkedin_disconnected(user_id)
-            except Exception as e:
-                logger.error("Failed to set linkedin disconnected in db: %s", e)
-
     return {
         "posts_fetched": posts_count,
         "posts_saved": posts_count,
