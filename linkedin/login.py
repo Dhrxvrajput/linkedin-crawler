@@ -176,6 +176,7 @@ async def login_to_linkedin(
     headless: bool | None = None,
     email: str | None = None,
     password: str | None = None,
+    li_at: str | None = None,
 ) -> bool:
     settings = get_settings()
     session_manager = SessionManager(session_path=session_path)
@@ -185,7 +186,9 @@ async def login_to_linkedin(
     login_password = password or settings.linkedin_password
 
     # 0. Load saved session state if available to restore cookies
-    if context and session_manager.session_exists():
+    # Do NOT restore if we are performing a fresh authentication attempt using li_at or credentials
+    is_fresh_login = bool(li_at or (email and password))
+    if not is_fresh_login and context and session_manager.session_exists():
         state = session_manager.get_storage_state()
         if state and "cookies" in state:
             try:

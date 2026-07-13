@@ -520,11 +520,17 @@ class LinkedInCrawler:
             await self._playwright.stop()
 
     async def ensure_logged_in(self) -> bool:
+        from linkedin.session_manager import SessionManager
+        session_manager = SessionManager(session_path=self._session_path)
+
         # Clear stale cookies on a fresh login/injection attempt to prevent ERR_TOO_MANY_REDIRECTS
         if self._li_at or (self._email and self._password):
             try:
                 await self._context.clear_cookies()
                 logger.info("Cleared stale cookies from context for fresh login attempt")
+                if session_manager.session_exists():
+                    session_manager.clear_session()
+                    logger.info("Cleared session JSON file on disk for fresh login attempt")
             except Exception as e:
                 logger.warning("Could not clear cookies: %s", e)
 
@@ -549,6 +555,7 @@ class LinkedInCrawler:
                 headless=self._headless,
                 email=self._email,
                 password=self._password,
+                li_at=self._li_at,
             )
         except Exception as exc:
             msg = str(exc).lower()
@@ -565,7 +572,15 @@ class LinkedInCrawler:
             await self._page.add_init_script(
                 "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
             )
-            return await login_to_linkedin(self._page, self._context)
+            return await login_to_linkedin(
+                self._page,
+                self._context,
+                session_path=self._session_path,
+                headless=self._headless,
+                email=self._email,
+                password=self._password,
+                li_at=self._li_at,
+            )
 
     async def _prepare_feed_page(self):
         page = self._page
