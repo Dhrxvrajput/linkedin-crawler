@@ -13,9 +13,15 @@ from utils.logger import setup_logger
 logger = setup_logger(__name__)
 
 
-async def run_agent(max_posts: int | None = None) -> dict:
+async def run_agent(max_posts: int | None = None, user_id: int | None = None) -> dict:
     settings = get_settings()
     setup_database()
+
+    browser_profile = None
+    session_path = None
+    if user_id is not None:
+        from services.user_linkedin_service import get_user_linkedin_paths
+        browser_profile, session_path = get_user_linkedin_paths(user_id)
 
     graph = compile_graph()
     initial_state = {
@@ -27,6 +33,8 @@ async def run_agent(max_posts: int | None = None) -> dict:
         "current_post_index": 0,
         "processed_count": 0,
         "max_posts": max_posts or settings.linkedin_max_posts,
+        "browser_profile": browser_profile,
+        "session_path": session_path,
     }
 
     logger.info("Starting LinkedIn Opportunity Agent (max_posts=%d)", initial_state["max_posts"])
@@ -211,7 +219,7 @@ def main():
         ])
         return
 
-    result = asyncio.run(run_agent(max_posts=args.max_posts))
+    result = asyncio.run(run_agent(max_posts=args.max_posts, user_id=args.user_id))
 
     print(f"\n{'='*50}")
     print(f"LinkedIn Opportunity Agent — Results")
