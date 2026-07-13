@@ -184,6 +184,16 @@ async def login_to_linkedin(
     login_email = email or settings.linkedin_email
     login_password = password or settings.linkedin_password
 
+    # 0. Load saved session state if available to restore cookies
+    if context and session_manager.session_exists():
+        state = session_manager.get_storage_state()
+        if state and "cookies" in state:
+            try:
+                await context.add_cookies(state["cookies"])
+                logger.info("Restored cookies from session JSON: %s", session_manager.session_path)
+            except Exception as e:
+                logger.warning("Could not restore cookies from session: %s", e)
+
     # 1. Check if persistent browser profile is already logged in
     await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=60000)
     await page.wait_for_timeout(2000)
@@ -205,11 +215,18 @@ async def login_to_linkedin(
         return False
 
     # 3. Headless → try automated login across multiple URLs
-    if not login_email or not login_password:
+    is_dummy = (
+        not login_email
+        or not login_password
+        or "your_email" in login_email.lower()
+        or "your_password" in login_password.lower()
+        or "example.com" in login_email.lower()
+    )
+    if is_dummy:
         await _save_debug_screenshot(page, "last_login_failed")
         logger.error(
-            "Not logged in. Run once with a visible browser or paste cookie:\n"
-            "  python app.py --login"
+            "No valid LinkedIn credentials or session found. "
+            "Please connect your account, paste a cookie, or log in manually via the dashboard."
         )
         return False
 
