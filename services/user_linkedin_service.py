@@ -42,7 +42,7 @@ async def connect_user_linkedin(
         logger.error("Failed to execute LinkedIn crawler login: %s", e, exc_info=True)
         if headless:
             return False, (
-                "Failed to run automated headless login. Please verify that the Playwright browser is installed "
+                f"Failed to run automated headless login: {str(e)}. Please verify that the Playwright browser is installed "
                 "on your server (e.g. running 'playwright install'), or configure your credentials."
             )
         else:
