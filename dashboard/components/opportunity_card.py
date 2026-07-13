@@ -21,7 +21,7 @@ def render_opportunity_card(opp, on_status_change=None):
             st.markdown(
                 dedent(f"""
                 <div style="
-                    font-size: 1.15rem;
+                    font-size: 1.25rem;
                     font-weight: 700;
                     color: #E8E8ED;
                     line-height: 1.3;
@@ -30,7 +30,7 @@ def render_opportunity_card(opp, on_status_change=None):
                     gap: 4px;
                 ">{icon_svg}<span>{opp.title}</span></div>
                 <div style="
-                    font-size: .78rem;
+                    font-size: .88rem;
                     color: #9D9DB7;
                     margin-top: 2px;
                 ">by {opp.author_name or 'Unknown'}</div>
@@ -53,7 +53,7 @@ def render_opportunity_card(opp, on_status_change=None):
                     border: 1px solid {color}33;
                     border-radius: 10px;
                     padding: 6px 12px;
-                    font-size: 1.2rem;
+                    font-size: 1.25rem;
                     font-weight: 700;
                     color: {color};
                 ">{score:.0%}</div>
@@ -64,7 +64,7 @@ def render_opportunity_card(opp, on_status_change=None):
             st.badge(opp.opportunity_type)
 
         st.markdown(
-            f'<div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius:10px; padding:16px 20px; margin: 8px 0; line-height:1.6; font-size:0.93rem; color:#E8E8ED; white-space:pre-line;">{opp.description}</div>',
+            f'<div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius:10px; padding:16px 20px; margin: 8px 0; line-height:1.65; font-size:1.02rem; color:#E8E8ED; white-space:pre-line;">{opp.description}</div>',
             unsafe_allow_html=True
         )
 
@@ -75,8 +75,8 @@ def render_opportunity_card(opp, on_status_change=None):
                 f"background:rgba(10,102,194,.10);"
                 f"border:1px solid rgba(10,102,194,.15);"
                 f"border-radius:6px;"
-                f"padding:2px 8px;"
-                f"font-size:.72rem;"
+                f"padding:3px 10px;"
+                f"font-size:.8rem;"
                 f"color:#5da9ff;"
                 f"font-weight:500;"
                 f"margin:2px 3px 2px 0;"
@@ -107,7 +107,7 @@ def render_opportunity_card(opp, on_status_change=None):
                 border: 1px solid {s_color}33;
                 border-radius: 8px;
                 padding: 3px 10px;
-                font-size: .72rem;
+                font-size: .8rem;
                 color: {s_color};
                 font-weight: 600;
                 text-transform: uppercase;
