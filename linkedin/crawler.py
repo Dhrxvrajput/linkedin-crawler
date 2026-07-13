@@ -500,14 +500,15 @@ class LinkedInCrawler:
 
         self._page = self._context.pages[0] if self._context.pages else await self._context.new_page()
         
-        # High-speed optimizations: Block heavy resources (Images, Media, CSS)
-        async def block_resources(route):
-            if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                await route.abort()
-            else:
-                await route.continue_()
-
-        await self._page.route("**/*", block_resources)
+        # High-speed optimizations: Block heavy resources (Images, Media, CSS) only in headless mode
+        # If user is running headed mode, they need CSS/images to login successfully and see the page!
+        if self._headless:
+            async def block_resources(route):
+                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                    await route.abort()
+                else:
+                    await route.continue_()
+            await self._page.route("**/*", block_resources)
 
         await self._page.add_init_script(
             "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
