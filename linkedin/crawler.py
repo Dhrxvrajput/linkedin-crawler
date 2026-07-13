@@ -526,12 +526,6 @@ class LinkedInCrawler:
                         "value": self._li_at,
                         "domain": ".linkedin.com",
                         "path": "/",
-                    },
-                    {
-                        "name": "li_at",
-                        "value": self._li_at,
-                        "domain": "www.linkedin.com",
-                        "path": "/",
                     }
                 ])
                 logger.info("Injected li_at cookie into browser context")
