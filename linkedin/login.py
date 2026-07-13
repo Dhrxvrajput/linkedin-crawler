@@ -192,6 +192,8 @@ async def login_to_linkedin(
         if context:
             await session_manager.save_session(context)
         return True
+    else:
+        await _save_debug_screenshot(page, "last_login_failed")
 
     # 2. Visible browser → manual login (most reliable)
     if not is_headless:
@@ -199,12 +201,14 @@ async def login_to_linkedin(
             if context:
                 await session_manager.save_session(context)
             return True
+        await _save_debug_screenshot(page, "last_login_failed")
         return False
 
     # 3. Headless → try automated login across multiple URLs
     if not login_email or not login_password:
+        await _save_debug_screenshot(page, "last_login_failed")
         logger.error(
-            "Not logged in. Run once with a visible browser o paste cookie:\n"
+            "Not logged in. Run once with a visible browser or paste cookie:\n"
             "  python app.py --login"
         )
         return False
@@ -218,7 +222,7 @@ async def login_to_linkedin(
         if await _fill_login_form(page, login_email, login_password):
             break
     else:
-        await _save_debug_screenshot(page, "login_failed")
+        await _save_debug_screenshot(page, "last_login_failed")
         logger.error(
             "LinkedIn blocked headless login (no form found).\n"
             "Run this once to log in manually — your session will be saved:\n"
@@ -237,6 +241,7 @@ async def login_to_linkedin(
         pass
 
     if "checkpoint" in page.url or "challenge" in page.url:
+        await _save_debug_screenshot(page, "last_login_failed")
         logger.error("Security challenge detected. Run: python app.py --login")
         return False
 
@@ -252,6 +257,6 @@ async def login_to_linkedin(
             await session_manager.save_session(context)
         return True
 
-    await _save_debug_screenshot(page, "login_failed_final")
+    await _save_debug_screenshot(page, "last_login_failed")
     logger.error("Login failed (URL: %s). Run: python app.py --login", page.url)
     return False
