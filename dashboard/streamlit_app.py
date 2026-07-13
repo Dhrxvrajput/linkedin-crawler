@@ -32,36 +32,49 @@ st.set_page_config(
 setup_database()
 
 # ── Programmatic Playwright Chromium Installation ─────────────────────────────
-@st.cache_resource
-def install_playwright_browsers():
-    import os
-    import sys
-    # Detect headless environments directly without imports
+# NOTE: Do NOT use @st.cache_resource here — it caches failures and prevents
+# retries when the ephemeral filesystem is wiped between Streamlit restarts.
+def _ensure_playwright_chromium():
+    """Install Playwright Chromium binary if running in a headless cloud environment."""
+    import subprocess
+
     is_headless = (
         os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true" or
         (sys.platform.startswith("linux") and not os.environ.get("DISPLAY"))
     )
-    if is_headless:
-        import subprocess
-        try:
-            # Install chromium binary AND its system dependencies on Streamlit Cloud
-            # --with-deps lets Playwright handle apt deps itself (avoids packages.txt conflicts)
-            result = subprocess.run(
-                [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"],
-                check=True, capture_output=True, text=True, timeout=120
-            )
-            if result.stdout:
-                print(f"[Playwright Install] {result.stdout[-500:]}")
-        except subprocess.TimeoutExpired:
-            st.warning("Playwright browser installation timed out (120s). Retrying without --with-deps...")
-            try:
-                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True, timeout=120)
-            except Exception as e2:
-                st.warning(f"Playwright install fallback also failed: {e2}")
-        except Exception as e:
-            st.warning(f"Programmatic Playwright installation warning: {e}")
+    if not is_headless:
+        return
 
-install_playwright_browsers()
+    browsers_path = Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/tmp/pw-browsers"))
+    # Quick check: skip install if any chrome binary already exists on disk
+    existing = list(browsers_path.glob("**/chrome*"))
+    if existing:
+        print(f"[Playwright] Chromium already installed: {existing[0]}")
+        return
+
+    print("[Playwright] Installing Chromium browser binary...")
+    try:
+        # Do NOT use --with-deps: it requires sudo/root which Streamlit Cloud doesn't provide.
+        # System dependencies are handled by packages.txt instead.
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=True, text=True, timeout=180,
+        )
+        if result.returncode == 0:
+            print(f"[Playwright] ✅ Chromium installed successfully.")
+            if result.stdout:
+                print(f"[Playwright] {result.stdout.strip()[-300:]}")
+        else:
+            st.warning(
+                f"Playwright install exited with code {result.returncode}.\n"
+                f"stderr: {result.stderr.strip()[-500:]}"
+            )
+    except subprocess.TimeoutExpired:
+        st.warning("⏱️ Playwright browser installation timed out (180s).")
+    except Exception as e:
+        st.warning(f"⚠️ Playwright installation error: {e}")
+
+_ensure_playwright_chromium()
 
 settings = get_settings()
 
