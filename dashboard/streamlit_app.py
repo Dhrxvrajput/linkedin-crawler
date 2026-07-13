@@ -439,6 +439,13 @@ st.markdown(
         transform: translateX(3px) scale(1.05);
     }
 
+    .view-profile-btn:hover {
+        background: rgba(10, 102, 194, 0.25) !important;
+        border-color: #0C7BE7 !important;
+        color: #E8E8ED !important;
+        box-shadow: 0 2px 8px rgba(10, 102, 194, 0.15);
+    }
+
     /* ─── Custom Tab SVG Icons ────────────────────── */
     .stTabs [data-baseweb="tab"]:nth-of-type(1)::before {
         content: "";

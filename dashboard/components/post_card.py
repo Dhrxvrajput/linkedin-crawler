@@ -155,7 +155,7 @@ def render_post_card(post):
                 ">
                     <span style="white-space:pre-line;">{content_short}</span>
                     <details style="margin-top: 6px; font-size: 0.88rem;">
-                        <summary style="outline:none; color:#378FE9; font-weight:600; cursor:pointer; list-style:none;" onclick="this.style.display='none'">
+                        <summary style="outline:none; color:#378FE9; font-weight:600; cursor:pointer; list-style:none;">
                             ▼ Read more
                         </summary>
                         <div style="white-space:pre-line; margin-top:6px; border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px;">{content_remaining}</div>
@@ -190,7 +190,7 @@ def render_post_card(post):
         profile_button_html = ""
         if profile_url:
             profile_button_html = f"""
-            <a href="{profile_url}" target="_blank" style="
+            <a href="{profile_url}" target="_blank" class="view-profile-btn" style="
                 display: inline-block;
                 background: rgba(10, 102, 194, 0.1);
                 border: 1px solid rgba(10, 102, 194, 0.2);
@@ -201,8 +201,7 @@ def render_post_card(post):
                 padding: 6px 14px;
                 border-radius: 6px;
                 transition: all 0.2s ease;
-            " onmouseover="this.style.background='rgba(10, 102, 194, 0.2)'; this.style.borderColor='#0C7BE7';"
-               onmouseout="this.style.background='rgba(10, 102, 194, 0.1)'; this.style.borderColor='rgba(10, 102, 194, 0.2)';">
+            ">
                 View Profile
             </a>
             """
