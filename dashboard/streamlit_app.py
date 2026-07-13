@@ -11,6 +11,11 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Force reload all custom project modules to flush sys.modules cache on Streamlit Cloud
+for module_name in list(sys.modules.keys()):
+    if any(module_name.startswith(p) for p in ["services", "linkedin", "utils", "database", "config", "schemas"]):
+        sys.modules.pop(module_name, None)
+
 from config.settings import BASE_DIR, get_settings
 from database.db import setup_database
 
