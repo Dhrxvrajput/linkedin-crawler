@@ -1,5 +1,9 @@
 import sys
+import os
 from pathlib import Path
+
+# Ensure consistent Playwright browser cache location across headless/cloud user environments
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/tmp/pw-browsers"
 
 import streamlit as st
 

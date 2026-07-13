@@ -1,6 +1,10 @@
 import asyncio
+import os
 from pathlib import Path
 from typing import Optional
+
+# Ensure consistent Playwright browser cache location across headless/cloud user environments
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/tmp/pw-browsers"
 
 from playwright.async_api import BrowserContext, Page, async_playwright
 
@@ -467,17 +471,24 @@ class LinkedInCrawler:
             "ignore_default_args": ["--enable-automation"],
         }
 
-        try:
-            self._context = await self._playwright.chromium.launch_persistent_context(
-                channel="chrome",
-                **launch_kwargs,
-            )
-            logger.info("Launched Chrome with persistent profile at %s", profile_dir)
-        except Exception:
+        from utils.helpers import is_headless_env
+        if self._headless or is_headless_env():
             self._context = await self._playwright.chromium.launch_persistent_context(
                 **launch_kwargs,
             )
-            logger.info("Launched Chromium with persistent profile at %s", profile_dir)
+            logger.info("Launched headless Chromium persistent profile at %s", profile_dir)
+        else:
+            try:
+                self._context = await self._playwright.chromium.launch_persistent_context(
+                    channel="chrome",
+                    **launch_kwargs,
+                )
+                logger.info("Launched Chrome with persistent profile at %s", profile_dir)
+            except Exception:
+                self._context = await self._playwright.chromium.launch_persistent_context(
+                    **launch_kwargs,
+                )
+                logger.info("Launched Chromium with persistent profile at %s", profile_dir)
 
         self._page = self._context.pages[0] if self._context.pages else await self._context.new_page()
         
