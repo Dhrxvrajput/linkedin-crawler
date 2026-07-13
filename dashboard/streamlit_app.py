@@ -26,10 +26,15 @@ setup_database()
 # ── Programmatic Playwright Chromium Installation ─────────────────────────────
 @st.cache_resource
 def install_playwright_browsers():
-    from utils.helpers import is_headless_env
-    if is_headless_env():
+    import os
+    import sys
+    # Detect headless environments directly without imports
+    is_headless = (
+        os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true" or
+        (sys.platform.startswith("linux") and not os.environ.get("DISPLAY"))
+    )
+    if is_headless:
         import subprocess
-        import sys
         try:
             # Install chromium binary and dependencies on Streamlit Cloud
             subprocess.run(["playwright", "install", "chromium"], check=True)
