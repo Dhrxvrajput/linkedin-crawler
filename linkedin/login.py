@@ -60,16 +60,7 @@ async def _save_debug_screenshot(page: Page, name: str):
 
 
 async def _is_on_feed(page: Page) -> bool:
-    url = page.url
-    if not (
-        ("feed" in url or "mynetwork" in url)
-        and "login" not in url
-        and "checkpoint" not in url
-        and "authwall" not in url
-    ):
-        return False
-
-    # Double check presence of logged-in layout elements to prevent false positives
+    # 1. Check logged-in layout elements first (highest accuracy)
     logged_in_selectors = [
         "#global-nav",
         ".global-nav",
@@ -77,13 +68,26 @@ async def _is_on_feed(page: Page) -> bool:
         ".feed-identity-module",
         "button.share-box-feed-entry__trigger",
         ".global-nav__me-photo",
+        "a[href*='/signout']",
+        "a[href*='/logout']",
     ]
     for sel in logged_in_selectors:
         try:
-            if await page.locator(sel).is_visible(timeout=1000):
+            if await page.locator(sel).is_visible(timeout=500):
                 return True
         except Exception:
             continue
+
+    # 2. Fall back to checking url if page shows feed or mynetwork without login/checkpoint
+    url = page.url
+    if (
+        ("feed" in url or "mynetwork" in url)
+        and "login" not in url
+        and "checkpoint" not in url
+        and "authwall" not in url
+    ):
+        return True
+
     return False
 
 
