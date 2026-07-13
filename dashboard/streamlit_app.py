@@ -18,6 +18,22 @@ st.set_page_config(
 )
 
 setup_database()
+
+# ── Programmatic Playwright Chromium Installation ─────────────────────────────
+@st.cache_resource
+def install_playwright_browsers():
+    from utils.helpers import is_headless_env
+    if is_headless_env():
+        import subprocess
+        import sys
+        try:
+            # Install chromium binary and dependencies on Streamlit Cloud
+            subprocess.run(["playwright", "install", "chromium"], check=True)
+        except Exception as e:
+            st.warning(f"Programmatic Playwright installation warning: {e}")
+
+install_playwright_browsers()
+
 settings = get_settings()
 
 # ── Premium Global CSS ────────────────────────────────────────────────────────
