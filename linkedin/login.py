@@ -156,10 +156,15 @@ async def login_to_linkedin(
     context: BrowserContext | None = None,
     session_path: str | None = None,
     headless: bool | None = None,
+    email: str | None = None,
+    password: str | None = None,
 ) -> bool:
     settings = get_settings()
     session_manager = SessionManager(session_path=session_path)
     is_headless = settings.linkedin_headless if headless is None else headless
+
+    login_email = email or settings.linkedin_email
+    login_password = password or settings.linkedin_password
 
     # 1. Check if persistent browser profile is already logged in
     await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=60000)
@@ -179,9 +184,9 @@ async def login_to_linkedin(
         return False
 
     # 3. Headless → try automated login across multiple URLs
-    if not settings.linkedin_email or not settings.linkedin_password:
+    if not login_email or not login_password:
         logger.error(
-            "Not logged in. Run once with a visible browser:\n"
+            "Not logged in. Run once with a visible browser o paste cookie:\n"
             "  python app.py --login"
         )
         return False
@@ -192,7 +197,7 @@ async def login_to_linkedin(
         await page.goto(login_url, wait_until="domcontentloaded", timeout=60000)
         await page.wait_for_timeout(2000)
 
-        if await _fill_login_form(page, settings.linkedin_email, settings.linkedin_password):
+        if await _fill_login_form(page, login_email, login_password):
             break
     else:
         await _save_debug_screenshot(page, "login_failed")

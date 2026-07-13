@@ -3,6 +3,9 @@ from services.auth_service import refresh_user, set_linkedin_connected
 from database.crud import get_user_by_id
 from database.db import get_db
 from utils.user_paths import linkedin_profile_dir, linkedin_session_file
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 def get_user_linkedin_paths(user_id: int) -> tuple[str, str]:
@@ -15,7 +18,12 @@ def get_user_linkedin_paths(user_id: int) -> tuple[str, str]:
     return str(profile), str(linkedin_session_file(user_id))
 
 
-async def connect_user_linkedin(user_id: int) -> tuple[bool, str]:
+async def connect_user_linkedin(
+    user_id: int,
+    email: str | None = None,
+    password: str | None = None,
+    li_at: str | None = None,
+) -> tuple[bool, str]:
     from utils.helpers import is_headless_env
     profile, session = get_user_linkedin_paths(user_id)
     headless = is_headless_env()
@@ -25,6 +33,9 @@ async def connect_user_linkedin(user_id: int) -> tuple[bool, str]:
             headless=headless,
             browser_profile=profile,
             session_path=session,
+            li_at=li_at,
+            email=email,
+            password=password,
         ) as crawler:
             ok = await crawler.ensure_logged_in()
     except Exception as e:
@@ -46,8 +57,8 @@ async def connect_user_linkedin(user_id: int) -> tuple[bool, str]:
         
     if headless:
         return False, (
-            "Automated headless login failed. Please verify that your credentials (LINKEDIN_EMAIL and LINKEDIN_PASSWORD) "
-            "are set correctly in your environment variables or Streamlit secrets."
+            "Automated headless login failed. Please verify that your credentials (Email & Password) "
+            "are set correctly, or paste a valid 'li_at' cookie."
         )
     return False, "Please finish signing in to LinkedIn in the browser window, then try again."
 

@@ -437,6 +437,9 @@ class LinkedInCrawler:
         headless: bool | None = None,
         browser_profile: str | None = None,
         session_path: str | None = None,
+        li_at: str | None = None,
+        email: str | None = None,
+        password: str | None = None,
     ):
         self.settings = get_settings()
         from utils.helpers import is_headless_env
@@ -446,6 +449,9 @@ class LinkedInCrawler:
             self._headless = True
         self._browser_profile = browser_profile or self.settings.linkedin_browser_profile
         self._session_path = session_path or self.settings.linkedin_session_path
+        self._li_at = li_at
+        self._email = email
+        self._password = password
         self._playwright = None
         self._context: Optional[BrowserContext] = None
         self._page: Optional[Page] = None
@@ -512,12 +518,25 @@ class LinkedInCrawler:
             await self._playwright.stop()
 
     async def ensure_logged_in(self) -> bool:
+        if self._li_at:
+            try:
+                await self._context.add_cookies([{
+                    "name": "li_at",
+                    "value": self._li_at,
+                    "domain": ".www.linkedin.com",
+                    "path": "/",
+                }])
+                logger.info("Injected li_at cookie into browser context")
+            except Exception as e:
+                logger.error("Failed to inject li_at cookie: %s", e)
         try:
             return await login_to_linkedin(
                 self._page,
                 self._context,
                 session_path=self._session_path,
                 headless=self._headless,
+                email=self._email,
+                password=self._password,
             )
         except Exception as exc:
             msg = str(exc).lower()
