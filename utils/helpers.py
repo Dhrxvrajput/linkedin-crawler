@@ -102,3 +102,16 @@ def truncate_text(text: str, max_length: int = 500) -> str:
     if len(text) <= max_length:
         return text
     return text[: max_length - 3] + "..."
+
+
+def is_headless_env() -> bool:
+    import os
+    import sys
+    # Streamlit Cloud sets STREAMLIT_SERVER_HEADLESS=true
+    if os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true":
+        return True
+    # Linux without DISPLAY is headless
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        return True
+    return False
+

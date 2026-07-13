@@ -435,7 +435,11 @@ class LinkedInCrawler:
         session_path: str | None = None,
     ):
         self.settings = get_settings()
+        from utils.helpers import is_headless_env
         self._headless = headless if headless is not None else self.settings.linkedin_headless
+        if not self._headless and is_headless_env():
+            logger.warning("No display server detected or running on Streamlit Cloud. Forcing headless=True.")
+            self._headless = True
         self._browser_profile = browser_profile or self.settings.linkedin_browser_profile
         self._session_path = session_path or self.settings.linkedin_session_path
         self._playwright = None
