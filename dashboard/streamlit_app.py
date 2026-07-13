@@ -2,6 +2,8 @@ import sys
 import os
 from pathlib import Path
 
+# Deploy version: 2026-07-13T09:30Z — DO NOT REMOVE (forces Streamlit Cloud cache invalidation)
+
 # Ensure consistent Playwright browser cache location across headless/cloud user environments
 if sys.platform != "darwin":
     os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/tmp/pw-browsers"
@@ -42,8 +44,20 @@ def install_playwright_browsers():
     if is_headless:
         import subprocess
         try:
-            # Install chromium binary and dependencies on Streamlit Cloud using active interpreter path to prevent FileNotFoundError
-            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+            # Install chromium binary AND its system dependencies on Streamlit Cloud
+            # --with-deps lets Playwright handle apt deps itself (avoids packages.txt conflicts)
+            result = subprocess.run(
+                [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"],
+                check=True, capture_output=True, text=True, timeout=120
+            )
+            if result.stdout:
+                print(f"[Playwright Install] {result.stdout[-500:]}")
+        except subprocess.TimeoutExpired:
+            st.warning("Playwright browser installation timed out (120s). Retrying without --with-deps...")
+            try:
+                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True, timeout=120)
+            except Exception as e2:
+                st.warning(f"Playwright install fallback also failed: {e2}")
         except Exception as e:
             st.warning(f"Programmatic Playwright installation warning: {e}")
 
