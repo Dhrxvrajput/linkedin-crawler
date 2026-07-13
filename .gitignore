@@ -5,5 +5,11 @@ __pycache__/
 .env
 storage/opportunities.db
 storage/logs/
+storage/browser_profile/
+storage/browser_profiles/
+storage/sessions/
+storage/debug/
+storage/exports/
 *.egg-info/
 .DS_Store
+scratch/
